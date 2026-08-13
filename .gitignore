@@ -1,0 +1,41 @@
+# ===== Saidas de compilacao =====
+/bin/
+/lib/
+*.exe
+*.dll
+*.bpl
+*.dcu
+*.o
+*.map
+*.drc
+*.dres
+*.res
+*.rsm
+*.tds
+*.identcache
+*.projdata
+*.tvsconfig
+
+# ===== Arquivos locais do RAD Studio / usuario =====
+*.local
+*.dproj.local
+*.dsk
+__history/
+__recovery/
+*.~*
+Win32/
+Win64/
+Android/
+Android64/
+iOSDevice64/
+OSX64/
+OSXARM64/
+Debug/
+Release/
+
+# ===== Diversos =====
+Thumbs.db
+desktop.ini
+
+# ===== Conteudo local (nao publicado) =====
+/roteiro/

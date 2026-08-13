@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "delphi-crm": {
+      "command": "C:\\Users\\fsilva\\Documents\\GitHub\\MCP\\bin\\DelphiMCP.exe",
+      "args": []
+    }
+  }
+}

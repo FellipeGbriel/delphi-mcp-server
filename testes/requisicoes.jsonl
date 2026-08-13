@@ -1,0 +1,9 @@
+{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"teste","version":"1.0"}}}
+{"jsonrpc":"2.0","method":"notifications/initialized"}
+{"jsonrpc":"2.0","id":2,"method":"ping"}
+{"jsonrpc":"2.0","id":3,"method":"tools/list"}
+{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"listar_clientes","arguments":{}}}
+{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"buscar_cliente","arguments":{"termo":"Curitiba"}}}
+{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"criar_cliente","arguments":{"nome":"Pedro Lima","email":"pedro.lima@exemplo.com.br","cidade":"Recife"}}}
+{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"buscar_cliente","arguments":{"termo":"Recife"}}}
+{"jsonrpc":"2.0","id":8,"method":"metodo/inexistente"}
