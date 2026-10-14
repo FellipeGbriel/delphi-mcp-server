@@ -43,6 +43,8 @@
         <DCC_ExeOutput>..\bin</DCC_ExeOutput>
         <DCC_DcuOutput>..\bin\dcu</DCC_DcuOutput>
         <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;Winapi;System.Win;$(DCC_Namespace)</DCC_Namespace>
+        <DCC_UnitSearchPath>..\lib\MCPConnect\Source;..\lib\Neon\Source;..\lib\Logify\Source;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_IncludePath>..\lib\MCPConnect\Source;..\lib\Neon\Source;..\lib\Logify\Source;$(DCC_IncludePath)</DCC_IncludePath>
         <SanitizedProjectName>DelphiMCP</SanitizedProjectName>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1)'!=''">
@@ -61,10 +63,8 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
-        <DCCReference Include="MCP.Transport.pas"/>
-        <DCCReference Include="MCP.Tools.pas"/>
-        <DCCReference Include="MCP.Server.pas"/>
         <DCCReference Include="Clientes.Repositorio.pas"/>
+        <DCCReference Include="Clientes.Ferramentas.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

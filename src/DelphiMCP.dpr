@@ -3,31 +3,43 @@ program DelphiMCP;
 {
   DelphiMCP - Servidor MCP (Model Context Protocol) escrito em Delphi.
 
-  Este e um servidor MCP que se comunica via JSON-RPC 2.0 sobre stdio
-  (entrada e saida padrao), o transporte mais usado por hosts como o
-  Claude Desktop. Ele expoe "ferramentas" (tools) que um modelo de IA
-  pode chamar - neste exemplo, um pequeno CRM em memoria.
+  Usa a biblioteca MCPConnect (https://github.com/delphi-blocks/MCPConnect),
+  que cuida de todo o protocolo: JSON-RPC 2.0, initialize, tools/list,
+  tools/call e o transporte stdio. Aqui so registramos a classe de
+  ferramentas (Clientes.Ferramentas) e iniciamos o servidor.
 
-  Regras importantes do transporte stdio:
-    - Cada mensagem JSON-RPC ocupa exatamente UMA linha (terminada por \n).
-    - stdout carrega SOMENTE mensagens do protocolo (JSON puro).
-    - Logs e diagnosticos vao para stderr, para nao poluir o canal.
+  Regra importante do transporte stdio: stdout carrega SOMENTE mensagens
+  do protocolo. Logs e diagnosticos vao para stderr.
 }
 
 {$APPTYPE CONSOLE}
 
 uses
   System.SysUtils,
-  MCP.Transport in 'MCP.Transport.pas',
-  MCP.Tools in 'MCP.Tools.pas',
-  MCP.Server in 'MCP.Server.pas',
-  Clientes.Repositorio in 'Clientes.Repositorio.pas';
+  MCPConnect.Transport.Stdio,
+  MCPConnect.Configuration.MCP,
+  // Registra os metodos MCP padrao (initialize, tools/*, ...) na inicializacao.
+  MCPConnect.MCP.Server.Api,
+  Clientes.Repositorio in 'Clientes.Repositorio.pas',
+  Clientes.Ferramentas in 'Clientes.Ferramentas.pas';
 
 begin
   try
-    var Servidor := TMCPServer.Create;
+    var Servidor := TJRPCStdioServer.Create(nil);
     try
-      Servidor.Executar;
+      Servidor.JRPCServer
+        .Plugin.Configure<IMCPConfig>
+          .Server
+            .SetName('delphi-crm')
+            .SetVersion('1.0.0')
+          .BackToMCP
+          .Tools
+            .RegisterClass(TClientesFerramentas)
+          .BackToMCP
+        .ApplyConfig;
+
+      // Le stdin e responde em stdout ate o host fechar a conexao.
+      Servidor.StartServerAndWait;
     finally
       Servidor.Free;
     end;

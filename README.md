@@ -54,13 +54,71 @@ Exemplo real de uma chamada e sua resposta:
 
 ```jsonc
 // Host -> Servidor
-{"jsonrpc":"2.0","id":5,"method":"tools/call",
+{"jsonrpc":"2.0","id":6,"method":"tools/call",
  "params":{"name":"buscar_cliente","arguments":{"termo":"Curitiba"}}}
 
 // Servidor -> Host
-{"jsonrpc":"2.0","id":5,"result":{"content":[{"type":"text",
- "text":"[{\"id\":3,\"nome\":\"Ana Costa\",\"cidade\":\"Curitiba\"}]"}],"isError":false}}
+{"jsonrpc":"2.0","id":6,"result":{"content":[{"type":"text",
+ "text":"[{\"id\":3,\"nome\":\"Ana Costa\",\"cidade\":\"Curitiba\"}]"}]}}
 ```
+
+Você **não precisa escrever nada disso à mão**: a biblioteca
+[MCPConnect](https://github.com/delphi-blocks/MCPConnect) cuida de todo o
+protocolo. Veja a seguir.
+
+---
+
+## Como fica o código com o MCPConnect
+
+Uma ferramenta é só um método Delphi comum, marcado com atributos
+(`Clientes.Ferramentas.pas`):
+
+```pascal
+type
+  TClientesFerramentas = class
+  public
+    [McpTool('buscar_cliente', 'Busca clientes por nome, cidade ou e-mail.')]
+    function BuscarCliente(
+      [McpParam('termo', 'Nome, cidade ou e-mail (ou parte) do cliente procurado.')] const ATermo: string
+    ): TArray<TCliente>;
+  end;
+
+function TClientesFerramentas.BuscarCliente(const ATermo: string): TArray<TCliente>;
+begin
+  Result := Repositorio.Buscar(ATermo);
+end;
+```
+
+A partir dos atributos e do RTTI, o MCPConnect:
+
+- gera a resposta do `tools/list`, incluindo o *JSON Schema* dos argumentos;
+- converte os argumentos JSON recebidos no `tools/call` para os parâmetros Delphi;
+- serializa o retorno (string vira texto; records e arrays viram JSON);
+- transforma exceções em respostas de erro JSON-RPC.
+
+E o programa principal (`DelphiMCP.dpr`) só registra a classe e sobe o servidor stdio:
+
+```pascal
+var Servidor := TJRPCStdioServer.Create(nil);
+try
+  Servidor.JRPCServer
+    .Plugin.Configure<IMCPConfig>
+      .Server
+        .SetName('delphi-crm')
+        .SetVersion('1.0.0')
+      .BackToMCP
+      .Tools
+        .RegisterClass(TClientesFerramentas)
+      .BackToMCP
+    .ApplyConfig;
+
+  Servidor.StartServerAndWait;
+finally
+  Servidor.Free;
+end;
+```
+
+Para criar uma nova ferramenta, basta adicionar outro método com `[McpTool]`.
 
 ---
 
@@ -80,10 +138,14 @@ plugaria **FireDAC**, um serviço REST, ou qualquer regra de negócio já existe
 
 ## Requisitos
 
-- **RAD Studio / Delphi** (testado com a versão **37.0 / RAD Studio 13**; compila
-  em qualquer Delphi moderno com suporte a `System.JSON` e inline variables).
+- **RAD Studio / Delphi** (testado com a versão **37.0 / RAD Studio 13**; o
+  MCPConnect suporta Delphi 11 ou superior).
 - Windows.
-- Apenas a **RTL** — sem dependências externas.
+- **git** no PATH (o `build.bat` usa para baixar as dependências).
+- Bibliotecas (baixadas automaticamente para `lib\` na primeira compilação):
+  - [MCPConnect](https://github.com/delphi-blocks/MCPConnect) — o servidor MCP
+  - [Neon](https://github.com/paolo-rossi/delphi-neon) — serialização JSON (usada pelo MCPConnect)
+  - [Logify](https://github.com/delphi-blocks/Logify) — logging (usada pelo MCPConnect)
 
 ---
 
@@ -95,13 +157,17 @@ plugaria **FireDAC**, um serviço REST, ou qualquer regra de negócio já existe
 build.bat
 ```
 
-O script chama o `rsvars.bat` do RAD Studio e gera `bin\DelphiMCP.exe`.
+Na primeira execução o script clona as dependências em `lib\`; depois chama o
+`rsvars.bat` do RAD Studio e gera `bin\DelphiMCP.exe`.
 Se a sua versão do Studio for diferente de `37.0`, edite a variável
 `STUDIO_VER` no topo do `build.bat`.
 
 ### Opção 2 — Pela IDE
 
-Abra `src\DelphiMCP.dproj` no RAD Studio e pressione **Shift+F9** (Build).
+Rode o `build.bat` uma vez (para baixar as dependências em `lib\`), abra
+`src\DelphiMCP.dproj` no RAD Studio e pressione **Shift+F9** (Build). O projeto
+já aponta o *search path* para `lib\MCPConnect\Source`, `lib\Neon\Source` e
+`lib\Logify\Source`.
 
 ---
 
@@ -147,14 +213,13 @@ Cada linha de saída é uma resposta JSON-RPC. Os logs de diagnóstico saem pelo
 
 ```
 MCP/
-├── build.bat                     # Compila via linha de comando
+├── build.bat                     # Baixa as dependências e compila
 ├── README.md
+├── lib/                          # MCPConnect, Neon e Logify (baixados, fora do git)
 ├── src/
-│   ├── DelphiMCP.dpr             # Programa principal (console)
+│   ├── DelphiMCP.dpr             # Programa principal: configura e sobe o servidor
 │   ├── DelphiMCP.dproj           # Projeto do RAD Studio
-│   ├── MCP.Transport.pas         # Leitura/escrita stdio (UTF-8, linha a linha)
-│   ├── MCP.Server.pas            # Dispatcher JSON-RPC + métodos MCP
-│   ├── MCP.Tools.pas             # Catálogo e execução das ferramentas
+│   ├── Clientes.Ferramentas.pas  # Ferramentas MCP ([McpTool] / [McpParam])
 │   └── Clientes.Repositorio.pas  # "Sistema de negócio" (CRM em memória)
 └── testes/
     └── requisicoes.jsonl         # Mensagens de exemplo para teste manual
@@ -165,20 +230,18 @@ MCP/
 ```mermaid
 sequenceDiagram
     participant H as Host (Claude)
-    participant T as MCP.Transport
-    participant S as MCP.Server
-    participant F as MCP.Tools
+    participant M as MCPConnect
+    participant F as TClientesFerramentas
     participant R as Repositorio
 
-    H->>T: linha JSON-RPC (stdin)
-    T->>S: string da mensagem
-    S->>S: parse + identifica metodo
-    S->>F: Executar("buscar_cliente", args)
-    F->>R: Buscar("Curitiba")
+    H->>M: linha JSON-RPC (stdin)
+    M->>M: parse + localiza a ferramenta "buscar_cliente"
+    M->>F: BuscarCliente('Curitiba')
+    F->>R: Buscar('Curitiba')
     R-->>F: TArray<TCliente>
-    F-->>S: resultado (texto JSON)
-    S->>T: resposta JSON-RPC
-    T-->>H: linha JSON-RPC (stdout)
+    F-->>M: TArray<TCliente>
+    M->>M: serializa o resultado em JSON
+    M-->>H: linha JSON-RPC (stdout)
 ```
 
 ---

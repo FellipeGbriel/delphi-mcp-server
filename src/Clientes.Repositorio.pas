@@ -37,10 +37,21 @@ type
     function Total: Integer;
   end;
 
+/// Instancia unica do repositorio, compartilhada por todas as chamadas.
+function Repositorio: TClienteRepositorio;
+
 implementation
 
 uses
   System.Character;
+
+var
+  FRepositorio: TClienteRepositorio;
+
+function Repositorio: TClienteRepositorio;
+begin
+  Result := FRepositorio;
+end;
 
 constructor TClienteRepositorio.Create;
 begin
@@ -103,5 +114,11 @@ function TClienteRepositorio.Total: Integer;
 begin
   Result := FClientes.Count;
 end;
+
+initialization
+  FRepositorio := TClienteRepositorio.Create;
+
+finalization
+  FRepositorio.Free;
 
 end.
